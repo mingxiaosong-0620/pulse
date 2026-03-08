@@ -1,0 +1,84 @@
+const BASE = '/api';
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${BASE}${url}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...options,
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  if (res.status === 204) return undefined as T;
+  return res.json();
+}
+
+export interface Profile {
+  id: number;
+  name: string;
+  avatar: string;
+  created_at: string;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+  sort_order: number;
+  subcategories: Subcategory[];
+}
+
+export interface Subcategory {
+  id: number;
+  category_id: number;
+  name: string;
+  icon: string;
+}
+
+export interface Entry {
+  id: number;
+  profile_id: number;
+  subcategory_id: number;
+  date: string;
+  start_time: string | null;
+  duration_minutes: number;
+  tags: string;
+  note: string | null;
+  created_at: string;
+  subcategory_name?: string;
+  subcategory_icon?: string;
+  category_name?: string;
+  category_color?: string;
+  category_icon?: string;
+  category_id?: number;
+}
+
+export interface DailyStat {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+  total_minutes: number;
+}
+
+export const api = {
+  getProfiles: () => request<Profile[]>('/profiles'),
+  getCategories: () => request<Category[]>('/categories'),
+  getEntries: (profileId: number, date: string) =>
+    request<Entry[]>(`/entries?profile_id=${profileId}&date=${date}`),
+  createEntry: (data: {
+    profile_id: number;
+    subcategory_id: number;
+    date: string;
+    start_time?: string;
+    duration_minutes?: number;
+    tags?: string[];
+    note?: string;
+  }) => request<Entry>('/entries', { method: 'POST', body: JSON.stringify(data) }),
+  updateEntry: (id: number, data: Partial<Entry>) =>
+    request<Entry>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteEntry: (id: number) =>
+    request<void>(`/entries/${id}`, { method: 'DELETE' }),
+  getDailyStats: (profileId: number, date: string) =>
+    request<DailyStat[]>(`/stats/daily?profile_id=${profileId}&date=${date}`),
+  getWeeklyStats: (profileId: number, startDate: string, endDate: string) =>
+    request<any>(`/stats/weekly?profile_id=${profileId}&start_date=${startDate}&end_date=${endDate}`),
+};
