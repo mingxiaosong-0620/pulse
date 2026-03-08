@@ -6,7 +6,7 @@ import TodayPage from './pages/TodayPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 
 export default function App() {
-  const { setProfiles, setActiveProfile, setCategories } = useAppStore();
+  const { setProfiles, setCategories } = useAppStore();
 
   useEffect(() => {
     api.getProfiles().then(setProfiles);
