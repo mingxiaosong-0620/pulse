@@ -1,0 +1,145 @@
+import { useEffect, useState, useCallback } from 'react';
+import { startOfWeek, endOfWeek, format } from 'date-fns';
+import { useAppStore } from '../stores/appStore';
+import { api } from '../lib/api';
+import WeekSelector from '../components/analytics/WeekSelector';
+import ProfileToggle from '../components/analytics/ProfileToggle';
+import WeeklyChart from '../components/analytics/WeeklyChart';
+import CategoryLeaderboard from '../components/analytics/CategoryLeaderboard';
+
+interface DailyCategory {
+  date: string;
+  category_id: number;
+  category_name: string;
+  color: string;
+  total_minutes: number;
+}
+
+interface CategoryTotal {
+  id: number;
+  name: string;
+  color: string;
+  icon: string;
+  total_minutes: number;
+}
+
+interface WeeklyStatsResponse {
+  daily: DailyCategory[];
+  totals: CategoryTotal[];
+}
+
+export default function AnalyticsPage() {
+  const { profiles, categories } = useAppStore();
+  const [weekStart, setWeekStart] = useState(() =>
+    startOfWeek(new Date(), { weekStartsOn: 1 }),
+  );
+  const [profileSelection, setProfileSelection] = useState<number | 'combined'>(1);
+  const [dailyData, setDailyData] = useState<DailyCategory[]>([]);
+  const [totals, setTotals] = useState<CategoryTotal[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchStats = useCallback(async () => {
+    setLoading(true);
+    try {
+      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 });
+      const startDate = format(weekStart, 'yyyy-MM-dd');
+      const endDate = format(weekEnd, 'yyyy-MM-dd');
+
+      if (profileSelection === 'combined') {
+        // Fetch for all profiles and merge
+        const results = await Promise.all(
+          profiles.map((p) => api.getWeeklyStats(p.id, startDate, endDate) as Promise<WeeklyStatsResponse>),
+        );
+
+        // Merge daily data
+        const mergedDaily: Map<string, DailyCategory> = new Map();
+        results.forEach((r) => {
+          r.daily.forEach((d) => {
+            const key = `${d.date}-${d.category_id}`;
+            const existing = mergedDaily.get(key);
+            if (existing) {
+              existing.total_minutes += d.total_minutes;
+            } else {
+              mergedDaily.set(key, { ...d });
+            }
+          });
+        });
+
+        // Merge totals
+        const mergedTotals: Map<number, CategoryTotal> = new Map();
+        results.forEach((r) => {
+          r.totals.forEach((t) => {
+            const existing = mergedTotals.get(t.id);
+            if (existing) {
+              existing.total_minutes += t.total_minutes;
+            } else {
+              mergedTotals.set(t.id, { ...t });
+            }
+          });
+        });
+
+        setDailyData(Array.from(mergedDaily.values()));
+        setTotals(Array.from(mergedTotals.values()));
+      } else {
+        const data: WeeklyStatsResponse = await api.getWeeklyStats(
+          profileSelection,
+          startDate,
+          endDate,
+        );
+        setDailyData(data.daily);
+        setTotals(data.totals);
+      }
+    } catch (err) {
+      console.error('Failed to fetch weekly stats:', err);
+      setDailyData([]);
+      setTotals([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [weekStart, profileSelection, profiles]);
+
+  useEffect(() => {
+    if (profiles.length > 0) {
+      fetchStats();
+    }
+  }, [fetchStats, profiles]);
+
+  const categoryDefs = categories.map((c) => ({
+    id: c.id,
+    name: c.name,
+    color: c.color,
+  }));
+
+  return (
+    <div className="flex flex-col pb-24">
+      <WeekSelector weekStart={weekStart} onChange={setWeekStart} />
+      <ProfileToggle value={profileSelection} onSelect={setProfileSelection} />
+
+      {loading ? (
+        <div className="px-4 space-y-3 mt-2">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 animate-pulse">
+            <div className="h-4 w-32 bg-gray-200 rounded mb-4" />
+            <div className="h-48 bg-gray-100 rounded-xl" />
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 animate-pulse">
+            <div className="h-4 w-36 bg-gray-200 rounded mb-4" />
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-gray-100 rounded" />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <WeeklyChart
+            weekStart={weekStart}
+            dailyData={dailyData}
+            categories={categoryDefs}
+          />
+          <CategoryLeaderboard totals={totals} />
+        </>
+      )}
+    </div>
+  );
+}
