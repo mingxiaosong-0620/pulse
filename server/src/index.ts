@@ -3,6 +3,10 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db/schema.js';
+import profileRoutes from './routes/profiles.js';
+import categoryRoutes from './routes/categories.js';
+import entryRoutes from './routes/entries.js';
+import statRoutes from './routes/stats.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -18,6 +22,12 @@ initializeDatabase();
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+// API routes
+app.use('/api/profiles', profileRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/entries', entryRoutes);
+app.use('/api/stats', statRoutes);
 
 // In production, serve the built React app
 const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');

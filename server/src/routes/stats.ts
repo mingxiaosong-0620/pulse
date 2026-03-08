@@ -1,0 +1,60 @@
+import { Router } from 'express';
+import db from '../db/connection.js';
+
+const router = Router();
+
+// Daily breakdown by category
+router.get('/daily', (req, res) => {
+  const { profile_id, date } = req.query;
+  if (!profile_id || !date) {
+    res.status(400).json({ error: 'profile_id and date required' });
+    return;
+  }
+
+  const stats = db.prepare(`
+    SELECT c.id, c.name, c.color, c.icon,
+           COALESCE(SUM(e.duration_minutes), 0) as total_minutes
+    FROM categories c
+    LEFT JOIN subcategories s ON s.category_id = c.id
+    LEFT JOIN entries e ON e.subcategory_id = s.id AND e.profile_id = ? AND e.date = ?
+    GROUP BY c.id
+    ORDER BY c.sort_order
+  `).all(profile_id, date);
+
+  res.json(stats);
+});
+
+// Weekly breakdown by category
+router.get('/weekly', (req, res) => {
+  const { profile_id, start_date, end_date } = req.query;
+  if (!profile_id || !start_date || !end_date) {
+    res.status(400).json({ error: 'profile_id, start_date, and end_date required' });
+    return;
+  }
+
+  const daily = db.prepare(`
+    SELECT e.date, c.id as category_id, c.name as category_name, c.color,
+           SUM(e.duration_minutes) as total_minutes
+    FROM entries e
+    JOIN subcategories s ON e.subcategory_id = s.id
+    JOIN categories c ON s.category_id = c.id
+    WHERE e.profile_id = ? AND e.date >= ? AND e.date <= ?
+    GROUP BY e.date, c.id
+    ORDER BY e.date, c.sort_order
+  `).all(profile_id, start_date, end_date);
+
+  const totals = db.prepare(`
+    SELECT c.id, c.name, c.color, c.icon,
+           COALESCE(SUM(e.duration_minutes), 0) as total_minutes
+    FROM categories c
+    LEFT JOIN subcategories s ON s.category_id = c.id
+    LEFT JOIN entries e ON e.subcategory_id = s.id
+      AND e.profile_id = ? AND e.date >= ? AND e.date <= ?
+    GROUP BY c.id
+    ORDER BY total_minutes DESC
+  `).all(profile_id, start_date, end_date);
+
+  res.json({ daily, totals });
+});
+
+export default router;
