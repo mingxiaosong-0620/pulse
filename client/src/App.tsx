@@ -4,6 +4,7 @@ import { api } from './lib/api';
 import Shell from './components/layout/Shell';
 import TodayPage from './pages/TodayPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import InsightsPage from './pages/InsightsPage';
 
 export default function App() {
   const { setProfiles, setCategories } = useAppStore();
@@ -19,9 +20,7 @@ export default function App() {
         <>
           {activeTab === 'today' && <TodayPage />}
           {activeTab === 'analytics' && <AnalyticsPage />}
-          {activeTab === 'insights' && (
-            <p className="text-gray-400 text-center mt-16 text-sm">Insights coming soon</p>
-          )}
+          {activeTab === 'insights' && <InsightsPage />}
         </>
       )}
     </Shell>

@@ -81,4 +81,9 @@ export const api = {
     request<DailyStat[]>(`/stats/daily?profile_id=${profileId}&date=${date}`),
   getWeeklyStats: (profileId: number, startDate: string, endDate: string) =>
     request<any>(`/stats/weekly?profile_id=${profileId}&start_date=${startDate}&end_date=${endDate}`),
+  generateInsight: (profileId: number, startDate: string, endDate: string) =>
+    request<{ insight: string; generatedAt: string }>('/insights/weekly', {
+      method: 'POST',
+      body: JSON.stringify({ profile_id: profileId, start_date: startDate, end_date: endDate }),
+    }),
 };
