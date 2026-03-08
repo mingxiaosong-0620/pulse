@@ -1,12 +1,13 @@
-import { Home, BarChart3, Sparkles } from 'lucide-react';
+import { Home, BarChart3, Sparkles, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 
-export type Tab = 'today' | 'analytics' | 'insights';
+export type Tab = 'today' | 'analytics' | 'insights' | 'guide';
 
 const tabs: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'today', label: 'Today', icon: Home },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'insights', label: 'Insights', icon: Sparkles },
+  { id: 'guide', label: 'Guide', icon: BookOpen },
 ];
 
 interface BottomNavProps {
@@ -23,14 +24,14 @@ export default function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             key={id}
             onClick={() => onTabChange(id)}
             className={clsx(
-              'flex-1 flex flex-col items-center gap-0.5 py-2.5 text-xs font-medium transition-colors relative',
+              'flex-1 flex flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors relative',
               activeTab === id ? 'text-blue-500' : 'text-gray-400 hover:text-gray-500',
             )}
           >
             {activeTab === id && (
               <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-500 rounded-full" />
             )}
-            <Icon size={20} />
+            <Icon size={18} />
             {label}
           </button>
         ))}

@@ -5,6 +5,7 @@ import Shell from './components/layout/Shell';
 import TodayPage from './pages/TodayPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import InsightsPage from './pages/InsightsPage';
+import GuidePage from './pages/GuidePage';
 
 export default function App() {
   const { setProfiles, setCategories } = useAppStore();
@@ -21,6 +22,7 @@ export default function App() {
           {activeTab === 'today' && <TodayPage />}
           {activeTab === 'analytics' && <AnalyticsPage />}
           {activeTab === 'insights' && <InsightsPage />}
+          {activeTab === 'guide' && <GuidePage />}
         </>
       )}
     </Shell>

@@ -86,4 +86,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ profile_id: profileId, start_date: startDate, end_date: endDate }),
     }),
+  createCategory: (data: { name: string; color: string; icon: string }) =>
+    request<Category>('/categories', { method: 'POST', body: JSON.stringify(data) }),
+  updateCategory: (id: number, data: { name: string; color: string; icon: string }) =>
+    request<Category>(`/categories/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteCategory: (id: number) =>
+    request<void>(`/categories/${id}`, { method: 'DELETE' }),
+  createSubcategory: (data: { category_id: number; name: string; icon: string }) =>
+    request<Subcategory>('/subcategories', { method: 'POST', body: JSON.stringify(data) }),
+  deleteSubcategory: (id: number) =>
+    request<void>(`/subcategories/${id}`, { method: 'DELETE' }),
 };

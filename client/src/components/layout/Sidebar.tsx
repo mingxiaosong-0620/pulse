@@ -1,4 +1,4 @@
-import { Home, BarChart3, Sparkles } from 'lucide-react';
+import { Home, BarChart3, Sparkles, BookOpen } from 'lucide-react';
 import clsx from 'clsx';
 import { useAppStore } from '../../stores/appStore';
 import type { Tab } from './BottomNav';
@@ -7,6 +7,7 @@ const navItems: { id: Tab; label: string; icon: typeof Home }[] = [
   { id: 'today', label: 'Today', icon: Home },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'insights', label: 'Insights', icon: Sparkles },
+  { id: 'guide', label: 'Guide', icon: BookOpen },
 ];
 
 interface SidebarProps {
