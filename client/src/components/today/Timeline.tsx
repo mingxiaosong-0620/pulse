@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { X, Square, Plus } from 'lucide-react';
 import type { Entry } from '../../lib/api';
 import { api } from '../../lib/api';
@@ -11,11 +11,11 @@ interface Props {
   onAddEntry?: (startTime: string) => void;
 }
 
-// Compact: 12px per 15 min = 48px per hour. Full 24h = 1152px (fits ~nicely in viewport)
 const PX_PER_15 = 12;
-const PX_PER_HOUR = PX_PER_15 * 4; // 48px
-const LABEL_W = 40; // time label width
-const BLOCK_L = 48; // block left offset
+const PX_PER_HOUR = PX_PER_15 * 4;
+const LABEL_W = 40;
+const BLOCK_L = 48;
+const GUTTER_W = 6; // clickable gutter between labels and blocks
 
 function parseTime(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -44,16 +44,12 @@ interface LaneEntry {
 
 function assignLanes(entries: Entry[]): LaneEntry[] {
   if (entries.length === 0) return [];
-
-  // Parse entries into {entry, start, end} and sort by start
   const parsed = entries.map(e => ({
     entry: e,
     start: parseTime(e.start_time!),
     end: parseTime(e.start_time!) + (e.duration_minutes || 15),
   })).sort((a, b) => a.start - b.start);
 
-  // Assign lanes using a greedy algorithm
-  // lanes[i] = end time of the last entry in lane i
   const lanes: number[] = [];
   const assignments: { entry: Entry; lane: number }[] = [];
 
@@ -73,21 +69,16 @@ function assignLanes(entries: Entry[]): LaneEntry[] {
     assignments.push({ entry: p.entry, lane: assignedLane });
   }
 
-  // For each entry, count how many entries overlap with it to determine totalLanes
   const result: LaneEntry[] = assignments.map(a => {
     const aStart = parseTime(a.entry.start_time!);
     const aEnd = aStart + (a.entry.duration_minutes || 15);
-
     let maxConcurrent = 1;
     for (const other of assignments) {
       if (other.entry.id === a.entry.id) continue;
       const oStart = parseTime(other.entry.start_time!);
       const oEnd = oStart + (other.entry.duration_minutes || 15);
-      if (oStart < aEnd && oEnd > aStart) {
-        maxConcurrent++;
-      }
+      if (oStart < aEnd && oEnd > aStart) maxConcurrent++;
     }
-
     return { entry: a.entry, lane: a.lane, totalLanes: maxConcurrent };
   });
 
@@ -125,52 +116,67 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
   const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  const handleBlockAreaMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top;
-    const minutes = Math.floor(y / PX_PER_15) * 15;
-    setHoverSlot(minutes);
-  };
-
-  const handleBlockAreaMouseLeave = () => {
-    setHoverSlot(null);
-  };
-
-  const handleBlockAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('[data-entry]')) return;
-    if (hoverSlot === null || !onAddEntry) return;
-    onAddEntry(fmtTime(hoverSlot));
-  };
-
   const scheduled = entries
     .filter((e) => e.start_time)
     .sort((a, b) => a.start_time!.localeCompare(b.start_time!));
   const unscheduled = entries.filter((e) => !e.start_time);
 
+  // Build a set of occupied 15-min slots for deciding hover placement
+  const occupiedSlots = useMemo(() => {
+    const slots = new Set<number>();
+    for (const e of scheduled) {
+      const start = parseTime(e.start_time!);
+      const dur = e.duration_minutes || 15;
+      const numSlots = Math.ceil(dur / 15);
+      for (let s = 0; s < numSlots; s++) {
+        slots.add(Math.floor(start / 15) + s);
+      }
+    }
+    return slots;
+  }, [scheduled]);
+
+  const isSlotOccupied = (minutes: number) => occupiedSlots.has(Math.floor(minutes / 15));
+
+  // Mouse handler for the full timeline area (handles both gutter and block area)
+  const handleTimelineMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const minutes = Math.floor(y / PX_PER_15) * 15;
+    if (minutes >= 0 && minutes < 1440) {
+      setHoverSlot(minutes);
+    }
+  };
+
+  const handleTimelineMouseLeave = () => {
+    setHoverSlot(null);
+  };
+
+  // Click on gutter or empty block area → add entry
+  const handleGutterClick = (slot: number) => {
+    if (onAddEntry) onAddEntry(fmtTime(slot));
+  };
+
+  const handleBlockAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('[data-entry]')) return;
+    if (hoverSlot === null || !onAddEntry) return;
+    if (!isSlotOccupied(hoverSlot)) {
+      onAddEntry(fmtTime(hoverSlot));
+    }
+  };
+
   if (entries.length === 0 && !isToday) {
     return (
       <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
         <div className="text-3xl mb-2">🌤️</div>
-        <p className="text-gray-400 text-sm">
-          No entries for this day.
-        </p>
+        <p className="text-gray-400 text-sm">No entries for this day.</p>
       </div>
     );
   }
 
-  // Always show full 24 hours
-  const rangeStartMin = 0;
-  const rangeEndMin = 1440;
-  const totalHeight = 24 * PX_PER_HOUR; // 1152px
-
-  // Hour labels every hour
-  const hourLabels: { label: string; top: number; isMajor: boolean }[] = [];
+  const totalHeight = 24 * PX_PER_HOUR;
+  const hourLabels: { label: string; top: number }[] = [];
   for (let h = 0; h <= 24; h++) {
-    hourLabels.push({
-      label: fmtTime(h * 60),
-      top: h * PX_PER_HOUR,
-      isMajor: true, // Show label every hour
-    });
+    hourLabels.push({ label: fmtTime(h * 60), top: h * PX_PER_HOUR });
   }
 
   const handleDelete = async (id: number) => {
@@ -183,71 +189,86 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
     onRefresh();
   };
 
-  // Current time position
   const currentTimeTop = (currentMinutes / 15) * PX_PER_15;
+  const laneEntries = assignLanes(scheduled);
 
   return (
     <div className="flex flex-col">
       <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 160px)' }}>
-        <div className="relative" style={{ height: totalHeight }}>
+        <div
+          className="relative"
+          style={{ height: totalHeight }}
+          onMouseMove={handleTimelineMouseMove}
+          onMouseLeave={handleTimelineMouseLeave}
+        >
           {/* Hour gridlines and labels */}
-          {hourLabels.map(({ label, top, isMajor }) => (
+          {hourLabels.map(({ label, top }) => (
             <div key={label} className="absolute left-0 right-0" style={{ top }}>
-              {isMajor && (
-                <span
-                  className="absolute text-[10px] text-gray-400 font-mono select-none"
-                  style={{ width: LABEL_W, textAlign: 'right', top: -6 }}
-                >
-                  {label}
-                </span>
-              )}
+              <span
+                className="absolute text-[10px] text-gray-400 font-mono select-none"
+                style={{ width: LABEL_W, textAlign: 'right', top: -6 }}
+              >
+                {label}
+              </span>
               <div
-                className={`absolute ${isMajor ? 'border-t border-gray-200' : 'border-t border-gray-50'}`}
+                className="absolute border-t border-gray-200"
                 style={{ left: BLOCK_L, right: 0 }}
               />
             </div>
           ))}
 
-          {/* Block area — entry blocks with lane layout for parallel tasks */}
+          {/* Gutter: clickable strip for adding entries in occupied time slots */}
+          {hoverSlot !== null && isSlotOccupied(hoverSlot) && onAddEntry && (
+            <div
+              className="absolute cursor-pointer z-10 rounded-sm bg-blue-100 hover:bg-blue-200 border border-blue-300/50 transition-colors flex items-center justify-center"
+              style={{
+                left: LABEL_W + 2,
+                width: GUTTER_W,
+                top: (hoverSlot / 15) * PX_PER_15,
+                height: PX_PER_15,
+              }}
+              onClick={() => handleGutterClick(hoverSlot)}
+              title={`Add task at ${fmtTime(hoverSlot)}`}
+            >
+              <Plus size={4} className="text-blue-500" />
+            </div>
+          )}
+
+          {/* Block area */}
           <div
             className="absolute"
             style={{ left: BLOCK_L, right: 4, top: 0, bottom: 0 }}
-            onMouseMove={handleBlockAreaMouseMove}
-            onMouseLeave={handleBlockAreaMouseLeave}
             onClick={handleBlockAreaClick}
           >
-            {/* Hover highlight for empty space */}
-            {hoverSlot !== null && (
+            {/* Hover highlight — only on empty (unoccupied) slots */}
+            {hoverSlot !== null && !isSlotOccupied(hoverSlot) && (
               <div
-                className="absolute left-0 right-0 bg-gray-100/50 border border-dashed border-gray-300/50 rounded pointer-events-none z-10"
+                className="absolute left-0 right-0 bg-gray-100/60 border border-dashed border-gray-300/40 rounded-sm pointer-events-none z-10"
                 style={{
                   top: (hoverSlot / 15) * PX_PER_15,
                   height: PX_PER_15,
                 }}
               >
-                <span className="absolute left-2 top-0 text-[9px] text-gray-400 font-mono">
-                  {fmtTime(hoverSlot)}
+                <span className="absolute left-2 top-0 text-[9px] text-gray-400 font-mono leading-[12px]">
+                  + {fmtTime(hoverSlot)}
                 </span>
               </div>
             )}
-            {assignLanes(scheduled).map(({ entry, lane, totalLanes }) => {
+
+            {/* Entry blocks */}
+            {laneEntries.map(({ entry, lane, totalLanes }) => {
               const startMin = parseTime(entry.start_time!);
               const isActive = !!entry.is_active;
               const duration = isActive
                 ? Math.max(currentMinutes - startMin, 15)
                 : (entry.duration_minutes || 15);
               const top = (startMin / 15) * PX_PER_15;
-              // Active entries get minimum 48px height so Finish button is always visible
               const minHeight = isActive ? 48 : PX_PER_15;
               const height = Math.max((duration / 15) * PX_PER_15, minHeight);
               const color = entry.category_color || '#3B82F6';
               const endTime = isActive ? 'now' : fmtTime(startMin + duration);
-
-              // Determine what fits in the block
               const canFitText = height >= 20;
               const canFitSubline = height >= 36;
-
-              // Lane-based positioning
               const leftPercent = (lane / totalLanes) * 100;
               const widthPercent = 100 / totalLanes - 0.5;
 
@@ -262,8 +283,7 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                   }}
                   className={`absolute group rounded-md shadow-sm border overflow-hidden cursor-pointer transition-shadow hover:shadow-md ${isActive ? 'ring-2 ring-offset-1' : ''}`}
                   style={{
-                    top,
-                    height,
+                    top, height,
                     left: `${leftPercent}%`,
                     width: `${widthPercent}%`,
                     backgroundColor: tint(color, 0.82),
@@ -273,19 +293,6 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                     ...(isActive ? { boxShadow: `0 0 0 2px ${color}` } : {}),
                   }}
                 >
-                  {/* Add parallel task button - appears on hover */}
-                  {onAddEntry && !isActive && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onAddEntry(entry.start_time!);
-                      }}
-                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-blue-600"
-                      title="Add parallel task"
-                    >
-                      <Plus size={10} />
-                    </button>
-                  )}
                   {canFitText ? (
                     <div className="flex items-start h-full px-2 py-1 gap-1.5 min-w-0">
                       <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
@@ -309,18 +316,16 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                           </span>
                         )}
                       </div>
-
                       {isActive ? (
                         <button
-                          onClick={() => handleFinish(entry.id)}
+                          onClick={(e) => { e.stopPropagation(); handleFinish(entry.id); }}
                           className="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600 transition-colors"
                         >
-                          <Square size={8} />
-                          Finish
+                          <Square size={8} /> Finish
                         </button>
                       ) : (
                         <button
-                          onClick={() => handleDelete(entry.id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(entry.id); }}
                           className="shrink-0 p-0.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         >
                           <X size={12} />
@@ -328,7 +333,6 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                       )}
                     </div>
                   ) : (
-                    /* Very short block — icon + finish if active */
                     <div className="flex items-center h-full px-1.5 gap-1">
                       <span className="text-xs">{entry.subcategory_icon || entry.category_icon}</span>
                       <span className="text-[11px] font-semibold truncate" style={{ color }}>
@@ -336,11 +340,10 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                       </span>
                       {isActive && (
                         <button
-                          onClick={() => handleFinish(entry.id)}
+                          onClick={(e) => { e.stopPropagation(); handleFinish(entry.id); }}
                           className="ml-auto shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded bg-red-500 text-white text-[10px] font-semibold hover:bg-red-600 transition-colors"
                         >
-                          <Square size={8} />
-                          Finish
+                          <Square size={8} /> Finish
                         </button>
                       )}
                     </div>
@@ -358,7 +361,7 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                 className="fixed z-40 bg-white rounded-xl shadow-xl border border-gray-200 p-3 max-w-xs"
                 style={{
                   left: Math.min(popupPos.x, window.innerWidth - 260),
-                  top: popupPos.y + 10,
+                  top: Math.min(popupPos.y + 10, window.innerHeight - 200),
                 }}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -376,13 +379,12 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                   </div>
                 )}
                 {selectedEntry.tags && (() => {
-                  const tags = typeof selectedEntry.tags === 'string' ? JSON.parse(selectedEntry.tags) : selectedEntry.tags;
+                  let tags: string[] = [];
+                  try { tags = typeof selectedEntry.tags === 'string' ? JSON.parse(selectedEntry.tags) : selectedEntry.tags; } catch {}
                   return Array.isArray(tags) && tags.length > 0 ? (
                     <div className="flex flex-wrap gap-1 mt-2">
                       {tags.map((tag: string, i: number) => (
-                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-                          {tag}
-                        </span>
+                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{tag}</span>
                       ))}
                     </div>
                   ) : null;
@@ -406,10 +408,7 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
 
           {/* Current time indicator */}
           {isToday && (
-            <div
-              className="absolute pointer-events-none z-20"
-              style={{ top: currentTimeTop, left: LABEL_W - 3, right: 0 }}
-            >
+            <div className="absolute pointer-events-none z-20" style={{ top: currentTimeTop, left: LABEL_W - 3, right: 0 }}>
               <div className="relative flex items-center">
                 <div className="w-2 h-2 rounded-full bg-red-500 shrink-0" />
                 <div className="flex-1 h-[2px] bg-red-500" style={{ marginLeft: -1 }} />
@@ -417,14 +416,14 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
             </div>
           )}
 
-          {/* Empty state overlay for today with no entries */}
+          {/* Empty state */}
           {entries.length === 0 && isToday && (
             <div
               className="absolute flex items-center justify-center pointer-events-none"
               style={{ top: currentTimeTop - 30, left: BLOCK_L, right: 0, height: 60 }}
             >
               <span className="text-sm text-gray-300 bg-white/80 px-3 py-1 rounded-full">
-                Tap + to start tracking
+                Click timeline to start tracking
               </span>
             </div>
           )}
@@ -434,9 +433,7 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
       {/* Unscheduled entries */}
       {unscheduled.length > 0 && (
         <div className="mt-3 pt-2 border-t border-dashed border-gray-200">
-          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5 px-1">
-            Unscheduled
-          </p>
+          <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1.5 px-1">Unscheduled</p>
           <div className="flex flex-col gap-1.5">
             {unscheduled.map((entry) => {
               const color = entry.category_color || '#3B82F6';
@@ -444,17 +441,10 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
                 <div
                   key={entry.id}
                   className="group relative rounded-md shadow-sm border pl-3 pr-2 py-1.5 flex items-center gap-1.5"
-                  style={{
-                    backgroundColor: tint(color, 0.88),
-                    borderColor: tint(color, 0.6),
-                    borderLeftWidth: 3,
-                    borderLeftColor: color,
-                  }}
+                  style={{ backgroundColor: tint(color, 0.88), borderColor: tint(color, 0.6), borderLeftWidth: 3, borderLeftColor: color }}
                 >
                   <span className="text-sm">{entry.subcategory_icon || entry.category_icon}</span>
-                  <span className="text-xs font-semibold truncate" style={{ color }}>
-                    {entry.subcategory_name || 'Entry'}
-                  </span>
+                  <span className="text-xs font-semibold truncate" style={{ color }}>{entry.subcategory_name || 'Entry'}</span>
                   {entry.duration_minutes > 0 && (
                     <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full" style={{ backgroundColor: tint(color, 0.65), color }}>
                       {fmtDuration(entry.duration_minutes)}
