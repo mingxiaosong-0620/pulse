@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { initializeDatabase } from './db/schema.js';
+import { autoSeed } from './db/auto-seed.js';
 import profileRoutes from './routes/profiles.js';
 import categoryRoutes from './routes/categories.js';
 import entryRoutes from './routes/entries.js';
@@ -17,8 +18,9 @@ const PORT = parseInt(process.env.PORT || '3001');
 app.use(cors());
 app.use(express.json());
 
-// Initialize DB on startup
+// Initialize DB and auto-seed if empty (first deploy)
 initializeDatabase();
+autoSeed();
 
 // Health check
 app.get('/api/health', (_req, res) => {
