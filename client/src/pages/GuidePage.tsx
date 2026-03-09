@@ -3,6 +3,7 @@ import { X, Plus } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 import type { Category } from '../lib/api';
+import EmojiPicker from '../components/shared/EmojiPicker';
 
 const categoryDescriptions: Record<string, string> = {
   Professional: 'Work-related activities — deep focus, meetings, email, planning, learning, and admin tasks',
@@ -108,14 +109,7 @@ export default function GuidePage() {
 
                   {addingSubFor === cat.id ? (
                     <div className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Icon"
-                        value={newSubIcon}
-                        onChange={e => setNewSubIcon(e.target.value)}
-                        className="w-10 px-1.5 py-1 border border-gray-200 rounded-md text-sm text-center"
-                        autoFocus
-                      />
+                      <EmojiPicker value={newSubIcon} onChange={setNewSubIcon} color={cat.color} />
                       <input
                         type="text"
                         placeholder="Name"
@@ -156,14 +150,7 @@ export default function GuidePage() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
               <h3 className="font-medium text-gray-900">New Category</h3>
               <div className="flex flex-wrap gap-2">
-                <input
-                  type="text"
-                  placeholder="Icon (emoji)"
-                  value={newCatIcon}
-                  onChange={e => setNewCatIcon(e.target.value)}
-                  className="w-16 px-2 py-1.5 border border-gray-200 rounded-md text-sm text-center"
-                  autoFocus
-                />
+                <EmojiPicker value={newCatIcon} onChange={setNewCatIcon} color={newCatColor} />
                 <input
                   type="text"
                   placeholder="Category name"

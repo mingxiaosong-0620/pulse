@@ -3,6 +3,7 @@ import { ChevronLeft, Plus } from 'lucide-react';
 import { useAppStore } from '../../stores/appStore';
 import { api } from '../../lib/api';
 import type { Category, Subcategory } from '../../lib/api';
+import EmojiPicker from '../shared/EmojiPicker';
 import clsx from 'clsx';
 
 interface SubcategoryDrawerProps {
@@ -108,14 +109,7 @@ export default function SubcategoryDrawer({
       {showForm && (
         <div className="mt-4 p-3 rounded-2xl bg-gray-50 border border-gray-200">
           <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={newIcon}
-              onChange={(e) => setNewIcon(e.target.value)}
-              placeholder="📌"
-              className="w-12 px-2 py-1.5 text-center text-lg rounded-xl bg-white border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              maxLength={2}
-            />
+            <EmojiPicker value={newIcon} onChange={setNewIcon} color={category.color} />
             <input
               type="text"
               value={newName}
