@@ -74,18 +74,31 @@ router.post('/', async (req, res) => {
 });
 
 // Finish an active entry (set is_active=false, finalize duration)
+// Client sends its local end_time to avoid timezone issues
 router.post('/:id/finish', async (req, res) => {
   const { id } = req.params;
+  const { end_time } = req.body; // "HH:mm" from client's local clock
   const entry = (await pool.query('SELECT * FROM entries WHERE id = $1', [id])).rows[0];
   if (!entry) { res.status(404).json({ error: 'Entry not found' }); return; }
 
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
   const [sh, sm] = entry.start_time.split(':').map(Number);
   const startMinutes = sh * 60 + sm;
-  let duration = currentMinutes - startMinutes;
+
+  let endMinutes: number;
+  if (end_time) {
+    const [eh, em] = end_time.split(':').map(Number);
+    endMinutes = eh * 60 + em;
+  } else {
+    // Fallback: use server UTC time (less accurate)
+    const now = new Date();
+    endMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+  }
+
+  // Round end to nearest 15 min
+  endMinutes = Math.round(endMinutes / 15) * 15;
+
+  let duration = endMinutes - startMinutes;
   if (duration <= 0) duration += 1440;
-  duration = Math.ceil(duration / 15) * 15; // Round up to 15 min
   if (duration < 15) duration = 15;
 
   const { rows } = await pool.query(

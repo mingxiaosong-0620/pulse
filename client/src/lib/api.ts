@@ -78,8 +78,15 @@ export const api = {
     request<Entry>(`/entries/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   startEntry: (data: { profile_id: number; subcategory_id: number; date: string; start_time: string; tags?: string[]; note?: string }) =>
     request<Entry>('/entries', { method: 'POST', body: JSON.stringify({ ...data, duration_minutes: 15, is_active: true }) }),
-  finishEntry: (id: number) =>
-    request<Entry>(`/entries/${id}/finish`, { method: 'POST' }),
+  finishEntry: (id: number) => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    return request<Entry>(`/entries/${id}/finish`, {
+      method: 'POST',
+      body: JSON.stringify({ end_time: `${hh}:${mm}` }),
+    });
+  },
   deleteEntry: (id: number) =>
     request<void>(`/entries/${id}`, { method: 'DELETE' }),
   getDailyStats: (profileId: number, date: string) =>
