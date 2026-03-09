@@ -10,7 +10,7 @@ const FULL_DAY = 1440; // 24h in minutes
 const renderCustomLabel = ({ cx, cy, midAngle, outerRadius, name, total_minutes, color }: any) => {
   if (total_minutes / FULL_DAY < 0.05) return null;
   const RADIAN = Math.PI / 180;
-  const radius = outerRadius + 20;
+  const radius = outerRadius + 28;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const hours = (total_minutes / 60).toFixed(1).replace(/\.0$/, '');
@@ -41,7 +41,7 @@ export default function DailyRing({ stats }: Props) {
 
   return (
     <div className="flex flex-col items-center py-4">
-      <div className="relative w-64 h-64">
+      <div className="relative w-full" style={{ maxWidth: 480, height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -49,8 +49,8 @@ export default function DailyRing({ stats }: Props) {
               dataKey="total_minutes"
               cx="50%"
               cy="50%"
-              innerRadius={62}
-              outerRadius={85}
+              innerRadius={72}
+              outerRadius={100}
               startAngle={90}
               endAngle={-270}
               paddingAngle={hasData ? 3 : 0}

@@ -14,7 +14,7 @@ async function seed() {
   await pool.query(`
     INSERT INTO profiles (id, name, avatar) VALUES
       (1, 'Mingxiao', '🦝'),
-      (2, 'Partner', '🐢')
+      (2, 'Erik', '🐢')
   `);
   await pool.query("SELECT setval('profiles_id_seq', 2)");
 
@@ -115,7 +115,7 @@ async function seed() {
   await insertEntry(1, 7,  twoDaysAgo, '16:00', 120, '[]', 'Date night prep + dinner');
   await insertEntry(1, 23, twoDaysAgo, '18:00', 120, '[]', 'Gaming session');
 
-  // === Partner's today ===
+  // === Erik's today ===
   await insertEntry(2, 17, today, '00:00', 480, '[]', null);
   await insertEntry(2, 19, today, '08:00', 30,  '[]', null);
   await insertEntry(2, 18, today, '08:30', 30,  '[]', null);
@@ -126,7 +126,7 @@ async function seed() {
   await insertEntry(2, 16, today, '15:00', 45,  '["#yoga"]', 'Yoga class');
   await insertEntry(2, 12, today, '16:00', 60,  '[]', 'Reading');
 
-  // === Partner's yesterday ===
+  // === Erik's yesterday ===
   await insertEntry(2, 17, yesterday, '00:00', 480, '[]', null);
   await insertEntry(2, 18, yesterday, '08:00', 30,  '[]', null);
   await insertEntry(2, 1,  yesterday, '08:30', 150, '[]', null);

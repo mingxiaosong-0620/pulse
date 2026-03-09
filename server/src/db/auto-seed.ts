@@ -13,7 +13,7 @@ export async function autoSeed(): Promise<void> {
   await pool.query(`
     INSERT INTO profiles (id, name, avatar) VALUES
       (1, 'Mingxiao', '🦝'),
-      (2, 'Partner', '🐢')
+      (2, 'Erik', '🐢')
     ON CONFLICT DO NOTHING;
 
     SELECT setval('profiles_id_seq', 2);
