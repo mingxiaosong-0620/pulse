@@ -1,31 +1,31 @@
 import { Router } from 'express';
-import db from '../db/connection.js';
+import pool from '../db/connection.js';
 
 const router = Router();
 
 // Get entries for a profile on a date
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { profile_id, date } = req.query;
   if (!profile_id || !date) {
     res.status(400).json({ error: 'profile_id and date required' });
     return;
   }
 
-  const entries = db.prepare(`
+  const { rows } = await pool.query(`
     SELECT e.*, s.name as subcategory_name, s.icon as subcategory_icon,
            c.name as category_name, c.color as category_color, c.icon as category_icon, c.id as category_id
     FROM entries e
     JOIN subcategories s ON e.subcategory_id = s.id
     JOIN categories c ON s.category_id = c.id
-    WHERE e.profile_id = ? AND e.date = ?
-    ORDER BY e.start_time ASC, e.created_at ASC
-  `).all(profile_id, date);
+    WHERE e.profile_id = $1 AND e.date = $2
+    ORDER BY e.start_time ASC NULLS LAST, e.created_at ASC
+  `, [profile_id, date]);
 
-  res.json(entries);
+  res.json(rows);
 });
 
 // Create entry
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { profile_id, subcategory_id, date, start_time, duration_minutes, tags, note } = req.body;
 
   if (!profile_id || !subcategory_id || !date) {
@@ -33,45 +33,36 @@ router.post('/', (req, res) => {
     return;
   }
 
-  const result = db.prepare(`
-    INSERT INTO entries (profile_id, subcategory_id, date, start_time, duration_minutes, tags, note)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    profile_id,
-    subcategory_id,
-    date,
-    start_time || null,
-    duration_minutes || 15,
-    JSON.stringify(tags || []),
-    note || null
+  const { rows } = await pool.query(
+    `INSERT INTO entries (profile_id, subcategory_id, date, start_time, duration_minutes, tags, note)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [profile_id, subcategory_id, date, start_time || null, duration_minutes || 15, JSON.stringify(tags || []), note || null]
   );
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(entry);
+  res.status(201).json(rows[0]);
 });
 
 // Update entry
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const { id } = req.params;
   const { subcategory_id, start_time, duration_minutes, tags, note } = req.body;
 
-  db.prepare(`
+  const { rows } = await pool.query(`
     UPDATE entries SET
-      subcategory_id = COALESCE(?, subcategory_id),
-      start_time = COALESCE(?, start_time),
-      duration_minutes = COALESCE(?, duration_minutes),
-      tags = COALESCE(?, tags),
-      note = COALESCE(?, note)
-    WHERE id = ?
-  `).run(subcategory_id, start_time, duration_minutes, tags ? JSON.stringify(tags) : null, note, id);
+      subcategory_id = COALESCE($1, subcategory_id),
+      start_time = COALESCE($2, start_time),
+      duration_minutes = COALESCE($3, duration_minutes),
+      tags = COALESCE($4, tags),
+      note = COALESCE($5, note)
+    WHERE id = $6 RETURNING *
+  `, [subcategory_id, start_time, duration_minutes, tags ? JSON.stringify(tags) : null, note, id]);
 
-  const entry = db.prepare('SELECT * FROM entries WHERE id = ?').get(id);
-  res.json(entry);
+  res.json(rows[0]);
 });
 
 // Delete entry
-router.delete('/:id', (req, res) => {
-  db.prepare('DELETE FROM entries WHERE id = ?').run(req.params.id);
+router.delete('/:id', async (req, res) => {
+  await pool.query('DELETE FROM entries WHERE id = $1', [req.params.id]);
   res.status(204).end();
 });
 

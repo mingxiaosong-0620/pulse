@@ -18,10 +18,6 @@ const PORT = parseInt(process.env.PORT || '3001');
 app.use(cors());
 app.use(express.json());
 
-// Initialize DB and auto-seed if empty (first deploy)
-initializeDatabase();
-autoSeed();
-
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -42,6 +38,13 @@ app.get('/{*splat}', (_req, res) => {
   res.sendFile(path.join(clientDist, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Pulse API running on http://localhost:${PORT}`);
-});
+async function main() {
+  await initializeDatabase();
+  await autoSeed();
+
+  app.listen(PORT, () => {
+    console.log(`Pulse API running on http://localhost:${PORT}`);
+  });
+}
+
+main().catch(console.error);

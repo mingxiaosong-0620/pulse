@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import db from '../db/connection.js';
+import pool from '../db/connection.js';
 
 const router = Router();
 
-router.get('/', (_req, res) => {
-  const profiles = db.prepare('SELECT * FROM profiles ORDER BY id').all();
-  res.json(profiles);
+router.get('/', async (_req, res) => {
+  const { rows } = await pool.query('SELECT * FROM profiles ORDER BY id');
+  res.json(rows);
 });
 
 export default router;

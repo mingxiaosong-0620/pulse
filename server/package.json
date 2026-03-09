@@ -9,14 +9,14 @@
     "seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.2",
     "cors": "^2.8.5",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "pg": "^8.16.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.2",
+    "@types/pg": "^8.11.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.2"
   }

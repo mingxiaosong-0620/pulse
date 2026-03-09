@@ -1,27 +1,30 @@
 import { Router } from 'express';
-import db from '../db/connection.js';
+import pool from '../db/connection.js';
 
 const router = Router();
 
 // Create a new subcategory
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   const { category_id, name, icon } = req.body;
   if (!category_id || !name || !icon) {
-    return res.status(400).json({ error: 'category_id, name, and icon are required' });
+    res.status(400).json({ error: 'category_id, name, and icon are required' });
+    return;
   }
-  const category = db.prepare('SELECT id FROM categories WHERE id = ?').get(category_id);
-  if (!category) return res.status(404).json({ error: 'Category not found' });
+  const { rows: catRows } = await pool.query('SELECT id FROM categories WHERE id = $1', [category_id]);
+  if (catRows.length === 0) { res.status(404).json({ error: 'Category not found' }); return; }
 
-  const result = db.prepare('INSERT INTO subcategories (category_id, name, icon) VALUES (?, ?, ?)').run(category_id, name, icon);
-  const subcategory = db.prepare('SELECT * FROM subcategories WHERE id = ?').get(result.lastInsertRowid);
-  res.status(201).json(subcategory);
+  const { rows } = await pool.query(
+    'INSERT INTO subcategories (category_id, name, icon) VALUES ($1, $2, $3) RETURNING *',
+    [category_id, name, icon]
+  );
+  res.status(201).json(rows[0]);
 });
 
 // Delete a subcategory
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   const { id } = req.params;
-  const result = db.prepare('DELETE FROM subcategories WHERE id = ?').run(id);
-  if (result.changes === 0) return res.status(404).json({ error: 'Subcategory not found' });
+  const result = await pool.query('DELETE FROM subcategories WHERE id = $1', [id]);
+  if (result.rowCount === 0) { res.status(404).json({ error: 'Subcategory not found' }); return; }
   res.status(204).send();
 });
 
