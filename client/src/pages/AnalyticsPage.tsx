@@ -6,6 +6,7 @@ import WeekSelector from '../components/analytics/WeekSelector';
 import ProfileToggle from '../components/analytics/ProfileToggle';
 import WeeklyChart from '../components/analytics/WeeklyChart';
 import CategoryLeaderboard from '../components/analytics/CategoryLeaderboard';
+import ComparisonView from '../components/analytics/ComparisonView';
 
 interface DailyCategory {
   date: string;
@@ -36,6 +37,8 @@ export default function AnalyticsPage() {
   const [profileSelection, setProfileSelection] = useState<number | 'combined'>(1);
   const [dailyData, setDailyData] = useState<DailyCategory[]>([]);
   const [totals, setTotals] = useState<CategoryTotal[]>([]);
+  const [profile1Totals, setProfile1Totals] = useState<CategoryTotal[]>([]);
+  const [profile2Totals, setProfile2Totals] = useState<CategoryTotal[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
@@ -46,12 +49,21 @@ export default function AnalyticsPage() {
       const endDate = format(weekEnd, 'yyyy-MM-dd');
 
       if (profileSelection === 'combined') {
-        // Fetch for all profiles and merge
+        // Fetch for all profiles separately
         const results = await Promise.all(
           profiles.map((p) => api.getWeeklyStats(p.id, startDate, endDate) as Promise<WeeklyStatsResponse>),
         );
 
-        // Merge daily data
+        // Store individual profile totals for comparison view
+        if (results.length >= 2) {
+          setProfile1Totals(results[0].totals);
+          setProfile2Totals(results[1].totals);
+        } else if (results.length === 1) {
+          setProfile1Totals(results[0].totals);
+          setProfile2Totals([]);
+        }
+
+        // Also merge for any shared state (keeping backward compat)
         const mergedDaily: Map<string, DailyCategory> = new Map();
         results.forEach((r) => {
           r.daily.forEach((d) => {
@@ -65,7 +77,6 @@ export default function AnalyticsPage() {
           });
         });
 
-        // Merge totals
         const mergedTotals: Map<number, CategoryTotal> = new Map();
         results.forEach((r) => {
           r.totals.forEach((t) => {
@@ -88,11 +99,15 @@ export default function AnalyticsPage() {
         );
         setDailyData(data.daily);
         setTotals(data.totals);
+        setProfile1Totals([]);
+        setProfile2Totals([]);
       }
     } catch (err) {
       console.error('Failed to fetch weekly stats:', err);
       setDailyData([]);
       setTotals([]);
+      setProfile1Totals([]);
+      setProfile2Totals([]);
     } finally {
       setLoading(false);
     }
@@ -130,6 +145,13 @@ export default function AnalyticsPage() {
             </div>
           </div>
         </div>
+      ) : profileSelection === 'combined' ? (
+        <ComparisonView
+          profile1Totals={profile1Totals}
+          profile2Totals={profile2Totals}
+          profiles={profiles}
+          categories={categoryDefs}
+        />
       ) : (
         <>
           <WeeklyChart
