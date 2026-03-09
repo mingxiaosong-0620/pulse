@@ -19,7 +19,7 @@ export default function Shell({ children }: ShellProps) {
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col md:ml-52">
+      <div className="flex-1 flex flex-col md:ml-16">
         {/* Mobile header */}
         <header className="sticky top-0 z-30 flex items-center justify-between px-4 py-3 bg-white shadow-sm md:hidden">
           <h1 className="text-xl font-bold text-gray-900">Pulse</h1>

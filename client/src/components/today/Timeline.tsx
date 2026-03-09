@@ -83,13 +83,13 @@ export default function Timeline({ entries, onRefresh }: Props) {
   const rangeEndMin = 1440;
   const totalHeight = 24 * PX_PER_HOUR; // 1152px
 
-  // Hour labels every 2 hours for compact view, with all hour gridlines
+  // Hour labels every hour
   const hourLabels: { label: string; top: number; isMajor: boolean }[] = [];
   for (let h = 0; h <= 24; h++) {
     hourLabels.push({
       label: fmtTime(h * 60),
       top: h * PX_PER_HOUR,
-      isMajor: h % 2 === 0, // Show label every 2 hours
+      isMajor: true, // Show label every hour
     });
   }
 

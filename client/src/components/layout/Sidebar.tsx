@@ -19,51 +19,48 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const { profiles, activeProfileId, setActiveProfile } = useAppStore();
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-52 md:fixed md:inset-y-0 md:left-0 bg-white border-r border-gray-100 z-40">
+    <aside className="hidden md:flex md:flex-col md:w-16 md:fixed md:inset-y-0 md:left-0 bg-white border-r border-gray-100 z-40">
       {/* Logo */}
-      <div className="px-5 py-5">
-        <h1 className="text-xl font-bold text-gray-900">Pulse</h1>
+      <div className="flex items-center justify-center py-4">
+        <span className="text-lg font-bold text-gray-900">P</span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-1">
+      {/* Navigation — icon only */}
+      <nav className="flex-1 flex flex-col items-center gap-1 px-2">
         {navItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => onTabChange(id)}
             className={clsx(
-              'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+              'w-10 h-10 flex items-center justify-center rounded-lg transition-colors',
               activeTab === id
                 ? 'bg-blue-50 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50',
+                : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50',
             )}
+            title={label}
           >
-            <Icon size={18} />
-            {label}
+            <Icon size={20} />
           </button>
         ))}
       </nav>
 
       {/* Profile switcher */}
-      <div className="px-3 pb-4 border-t border-gray-100 pt-3">
-        <p className="text-xs text-gray-400 font-medium px-3 mb-2">Profiles</p>
-        <div className="flex gap-2 px-2">
-          {profiles.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setActiveProfile(p.id)}
-              className={clsx(
-                'w-9 h-9 rounded-full flex items-center justify-center text-base transition-all',
-                p.id === activeProfileId
-                  ? 'ring-2 ring-blue-500 bg-blue-50 scale-110'
-                  : 'bg-gray-100 hover:bg-gray-200',
-              )}
-              title={p.name}
-            >
-              {p.avatar}
-            </button>
-          ))}
-        </div>
+      <div className="flex flex-col items-center gap-1.5 pb-3 border-t border-gray-100 pt-3 px-2">
+        {profiles.map(p => (
+          <button
+            key={p.id}
+            onClick={() => setActiveProfile(p.id)}
+            className={clsx(
+              'w-9 h-9 rounded-full flex items-center justify-center text-base transition-all',
+              p.id === activeProfileId
+                ? 'ring-2 ring-blue-500 bg-blue-50 scale-110'
+                : 'bg-gray-100 hover:bg-gray-200',
+            )}
+            title={p.name}
+          >
+            {p.avatar}
+          </button>
+        ))}
       </div>
     </aside>
   );
