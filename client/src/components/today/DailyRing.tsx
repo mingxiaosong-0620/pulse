@@ -88,8 +88,8 @@ export default function DailyRing({ stats }: Props) {
 
   return (
     <div className="flex flex-col py-2">
-      {/* Compact donut */}
-      <div className="relative mx-auto" style={{ width: 200, height: 200 }}>
+      {/* Compact donut — smaller on mobile, normal on desktop */}
+      <div className="relative mx-auto w-[140px] h-[140px] md:w-[200px] md:h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -97,8 +97,8 @@ export default function DailyRing({ stats }: Props) {
               dataKey="total_minutes"
               cx="50%"
               cy="50%"
-              innerRadius={55}
-              outerRadius={80}
+              innerRadius="55%"
+              outerRadius="80%"
               startAngle={90}
               endAngle={-270}
               paddingAngle={hasData ? 2 : 0}
@@ -109,11 +109,16 @@ export default function DailyRing({ stats }: Props) {
                 <Cell key={i} fill={entry.color} style={{ cursor: 'pointer' }} />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip
+              content={<CustomTooltip />}
+              offset={30}
+              allowEscapeViewBox={{ x: true, y: true }}
+              wrapperStyle={{ zIndex: 50, pointerEvents: 'none' }}
+            />
           </PieChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <span className="text-lg font-bold text-gray-800">
+          <span className="text-sm md:text-lg font-bold text-gray-800">
             {trackedMinutes > 0 ? `${trackedHours}/24h` : '0/24h'}
           </span>
         </div>
