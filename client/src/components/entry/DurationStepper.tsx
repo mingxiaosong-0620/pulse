@@ -53,7 +53,7 @@ const TIME_SLOTS = Array.from({ length: 96 }, (_, i) => {
 });
 
 // Quick duration presets
-const DURATION_PRESETS = [15, 30, 45, 60, 90, 120, 180, 240];
+const DURATION_PRESETS = [15, 30, 45, 60, 90, 120, 180, 240, 360, 480];
 
 export default function DurationStepper({
   category,
