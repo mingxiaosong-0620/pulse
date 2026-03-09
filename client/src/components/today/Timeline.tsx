@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Square } from 'lucide-react';
+import { X, Square, Plus } from 'lucide-react';
 import type { Entry } from '../../lib/api';
 import { api } from '../../lib/api';
 import { useAppStore } from '../../stores/appStore';
@@ -8,6 +8,7 @@ import { format } from 'date-fns';
 interface Props {
   entries: Entry[];
   onRefresh: () => void;
+  onAddEntry?: (startTime: string) => void;
 }
 
 // Compact: 12px per 15 min = 48px per hour. Full 24h = 1152px (fits ~nicely in viewport)
@@ -102,7 +103,7 @@ function tint(hex: string, amount = 0.85): string {
   return `rgb(${blend(r)}, ${blend(g)}, ${blend(b)})`;
 }
 
-export default function Timeline({ entries, onRefresh }: Props) {
+export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
   const selectedDate = useAppStore((s) => s.selectedDate);
   const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
 
@@ -119,6 +120,27 @@ export default function Timeline({ entries, onRefresh }: Props) {
     }, 60_000);
     return () => clearInterval(interval);
   }, [isToday]);
+
+  const [hoverSlot, setHoverSlot] = useState<number | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<Entry | null>(null);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  const handleBlockAreaMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const minutes = Math.floor(y / PX_PER_15) * 15;
+    setHoverSlot(minutes);
+  };
+
+  const handleBlockAreaMouseLeave = () => {
+    setHoverSlot(null);
+  };
+
+  const handleBlockAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('[data-entry]')) return;
+    if (hoverSlot === null || !onAddEntry) return;
+    onAddEntry(fmtTime(hoverSlot));
+  };
 
   const scheduled = entries
     .filter((e) => e.start_time)
@@ -187,7 +209,27 @@ export default function Timeline({ entries, onRefresh }: Props) {
           ))}
 
           {/* Block area — entry blocks with lane layout for parallel tasks */}
-          <div className="absolute" style={{ left: BLOCK_L, right: 4, top: 0, bottom: 0 }}>
+          <div
+            className="absolute"
+            style={{ left: BLOCK_L, right: 4, top: 0, bottom: 0 }}
+            onMouseMove={handleBlockAreaMouseMove}
+            onMouseLeave={handleBlockAreaMouseLeave}
+            onClick={handleBlockAreaClick}
+          >
+            {/* Hover highlight for empty space */}
+            {hoverSlot !== null && (
+              <div
+                className="absolute left-0 right-0 bg-gray-100/50 border border-dashed border-gray-300/50 rounded pointer-events-none z-10"
+                style={{
+                  top: (hoverSlot / 15) * PX_PER_15,
+                  height: PX_PER_15,
+                }}
+              >
+                <span className="absolute left-2 top-0 text-[9px] text-gray-400 font-mono">
+                  {fmtTime(hoverSlot)}
+                </span>
+              </div>
+            )}
             {assignLanes(scheduled).map(({ entry, lane, totalLanes }) => {
               const startMin = parseTime(entry.start_time!);
               const isActive = !!entry.is_active;
@@ -212,7 +254,13 @@ export default function Timeline({ entries, onRefresh }: Props) {
               return (
                 <div
                   key={entry.id}
-                  className={`absolute group rounded-md shadow-sm border overflow-hidden cursor-default transition-shadow hover:shadow-md ${isActive ? 'ring-2 ring-offset-1' : ''}`}
+                  data-entry
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEntry(selectedEntry?.id === entry.id ? null : entry);
+                    setPopupPos({ x: e.clientX, y: e.clientY });
+                  }}
+                  className={`absolute group rounded-md shadow-sm border overflow-hidden cursor-pointer transition-shadow hover:shadow-md ${isActive ? 'ring-2 ring-offset-1' : ''}`}
                   style={{
                     top,
                     height,
@@ -225,6 +273,19 @@ export default function Timeline({ entries, onRefresh }: Props) {
                     ...(isActive ? { boxShadow: `0 0 0 2px ${color}` } : {}),
                   }}
                 >
+                  {/* Add parallel task button - appears on hover */}
+                  {onAddEntry && !isActive && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAddEntry(entry.start_time!);
+                      }}
+                      className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-blue-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-blue-600"
+                      title="Add parallel task"
+                    >
+                      <Plus size={10} />
+                    </button>
+                  )}
                   {canFitText ? (
                     <div className="flex items-start h-full px-2 py-1 gap-1.5 min-w-0">
                       <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
@@ -288,6 +349,60 @@ export default function Timeline({ entries, onRefresh }: Props) {
               );
             })}
           </div>
+
+          {/* Entry detail popup */}
+          {selectedEntry && (
+            <>
+              <div className="fixed inset-0 z-30" onClick={() => setSelectedEntry(null)} />
+              <div
+                className="fixed z-40 bg-white rounded-xl shadow-xl border border-gray-200 p-3 max-w-xs"
+                style={{
+                  left: Math.min(popupPos.x, window.innerWidth - 260),
+                  top: popupPos.y + 10,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-lg">{selectedEntry.subcategory_icon || selectedEntry.category_icon}</span>
+                  <span className="text-sm font-semibold text-gray-800">
+                    {selectedEntry.subcategory_name || 'Entry'}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {selectedEntry.start_time?.slice(0, 5)} – {fmtTime(parseTime(selectedEntry.start_time!) + selectedEntry.duration_minutes)} · {fmtDuration(selectedEntry.duration_minutes)}
+                </div>
+                {selectedEntry.note && (
+                  <div className="text-xs text-gray-600 bg-gray-50 rounded-lg px-2.5 py-2 mt-2">
+                    {selectedEntry.note}
+                  </div>
+                )}
+                {selectedEntry.tags && (() => {
+                  const tags = typeof selectedEntry.tags === 'string' ? JSON.parse(selectedEntry.tags) : selectedEntry.tags;
+                  return Array.isArray(tags) && tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {tags.map((tag: string, i: number) => (
+                        <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
+                {onAddEntry && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedEntry(null);
+                      onAddEntry(selectedEntry.start_time!);
+                    }}
+                    className="mt-2 w-full text-xs text-blue-500 font-medium py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Plus size={12} />
+                    Add parallel task at this time
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           {/* Current time indicator */}
           {isToday && (

@@ -13,6 +13,7 @@ interface QuickEntryProps {
   onClose: () => void;
   onSaved: () => void;
   entries?: Entry[];
+  prefilledStartTime?: string | null;
 }
 
 type Step = 1 | 2 | 3;
@@ -62,7 +63,7 @@ function roundedNow(): string {
   return `${hh}:${mm}`;
 }
 
-export default function QuickEntry({ isOpen, onClose, onSaved, entries = [] }: QuickEntryProps) {
+export default function QuickEntry({ isOpen, onClose, onSaved, entries = [], prefilledStartTime }: QuickEntryProps) {
   const [step, setStep] = useState<Step>(1);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedSubcategory, setSelectedSubcategory] = useState<Subcategory | null>(null);
@@ -73,11 +74,12 @@ export default function QuickEntry({ isOpen, onClose, onSaved, entries = [] }: Q
   const selectedDate = useAppStore((s) => s.selectedDate);
 
   const startTime = useMemo(() => {
+    if (prefilledStartTime) return prefilledStartTime;
     if (entries.length > 0) {
       return findFirstGap(entries);
     }
     return roundedNow();
-  }, [entries]);
+  }, [entries, prefilledStartTime]);
 
   // Reset state when sheet opens
   useEffect(() => {

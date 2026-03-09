@@ -16,6 +16,12 @@ export default function TodayPage() {
   const [wallClockMinutes, setWallClockMinutes] = useState(0);
   const [multiplier, setMultiplier] = useState(1);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [prefilledStartTime, setPrefilledStartTime] = useState<string | null>(null);
+
+  const handleAddFromTimeline = (startTime: string) => {
+    setPrefilledStartTime(startTime);
+    setShowQuickEntry(true);
+  };
 
   const fetchData = useCallback(() => {
     if (!activeProfileId) return;
@@ -57,7 +63,7 @@ export default function TodayPage() {
 
         {/* Timeline — takes remaining space */}
         <div className="px-4 md:px-0 md:flex-1 mt-2 md:mt-0">
-          <Timeline entries={entries} onRefresh={fetchData} />
+          <Timeline entries={entries} onRefresh={fetchData} onAddEntry={handleAddFromTimeline} />
         </div>
       </div>
 
@@ -71,9 +77,10 @@ export default function TodayPage() {
 
       <QuickEntry
         isOpen={showQuickEntry}
-        onClose={() => setShowQuickEntry(false)}
+        onClose={() => { setShowQuickEntry(false); setPrefilledStartTime(null); }}
         onSaved={fetchData}
         entries={entries}
+        prefilledStartTime={prefilledStartTime}
       />
     </div>
   );
