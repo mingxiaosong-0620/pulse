@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import clsx from 'clsx';
 
-// Common activity emojis organized by theme
-const EMOJI_GROUPS = [
-  { label: 'Work', emojis: ['🎯', '💼', '🤝', '📧', '📋', '📚', '🗂️', '💻', '📊', '🔬', '📝', '🏗️'] },
-  { label: 'People', emojis: ['💕', '👨‍👩‍👧', '👯', '🌐', '🏘️', '🤗', '👋', '💬', '🎉', '🍻', '☕', '🫂'] },
-  { label: 'Growth', emojis: ['📖', '🔧', '🎓', '✍️', '💪', '🧠', '🎨', '📐', '🌟', '🏋️', '🧘', '🏃'] },
-  { label: 'Life', emojis: ['😴', '🍳', '🚿', '🚇', '🧹', '🏥', '🛒', '👔', '💊', '🦷', '🏠', '🧺'] },
-  { label: 'Fun', emojis: ['🎮', '📱', '🎬', '🎵', '🏕️', '🎨', '📸', '🎧', '🏖️', '⚽', '🎲', '🎤'] },
-  { label: 'Other', emojis: ['📌', '⭐', '🔥', '❓', '💡', '🎁', '🌈', '🚀', '🐾', '🌸', '🍀', '✨'] },
+// Flat list of common activity emojis — compact, single scrollable row
+const EMOJIS = [
+  '🎯', '💼', '🤝', '📧', '📋', '📚', '🗂️', '💻', '📊', '🔬', '📝', '🏗️',
+  '💕', '👨‍👩‍👧', '👯', '🌐', '🏘️', '🤗', '💬', '🎉', '☕',
+  '📖', '🔧', '🎓', '✍️', '💪', '🧠', '🎨', '🌟', '🏋️', '🧘', '🏃',
+  '😴', '🍳', '🚿', '🚇', '🧹', '🏥', '🛒', '💊', '🏠',
+  '🎮', '📱', '🎬', '🎵', '🏕️', '📸', '🎧', '🏖️', '⚽', '🎲',
+  '📌', '⭐', '🔥', '💡', '🎁', '🌈', '🚀', '🐾', '🌸', '✨',
 ];
 
 interface EmojiPickerProps {
@@ -36,41 +36,30 @@ export default function EmojiPicker({ value, onChange, color }: EmojiPickerProps
         {value || '📌'}
       </button>
 
-      {/* Dropdown picker */}
+      {/* Picker — opens UPWARD, horizontal scroll */}
       {isOpen && (
         <>
-          {/* Backdrop to close */}
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-
-          <div className="absolute top-12 left-0 z-50 w-64 bg-white rounded-xl shadow-xl border border-gray-200 p-2 max-h-56 overflow-y-auto">
-            {EMOJI_GROUPS.map((group) => (
-              <div key={group.label} className="mb-1.5">
-                <p className="text-[9px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-0.5">
-                  {group.label}
-                </p>
-                <div className="grid grid-cols-6 gap-0.5">
-                  {group.emojis.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => {
-                        onChange(emoji);
-                        setIsOpen(false);
-                      }}
-                      className={clsx(
-                        'w-9 h-9 flex items-center justify-center rounded-lg text-lg transition-all hover:scale-110',
-                        value === emoji
-                          ? 'bg-blue-50 ring-1 ring-blue-300'
-                          : 'hover:bg-gray-50',
-                      )}
-                      style={value === emoji && color ? { backgroundColor: `${color}18` } : undefined}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
+          <div className="absolute bottom-12 left-0 z-50 bg-white rounded-xl shadow-xl border border-gray-200 p-2 w-64">
+            <div className="grid grid-cols-8 gap-0.5 max-h-32 overflow-y-auto">
+              {EMOJIS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => {
+                    onChange(emoji);
+                    setIsOpen(false);
+                  }}
+                  className={clsx(
+                    'w-7 h-7 flex items-center justify-center rounded text-base transition-all hover:scale-125',
+                    value === emoji ? 'bg-blue-50 ring-1 ring-blue-300' : 'hover:bg-gray-50',
+                  )}
+                  style={value === emoji && color ? { backgroundColor: `${color}20` } : undefined}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
           </div>
         </>
       )}
