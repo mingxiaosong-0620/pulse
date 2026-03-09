@@ -86,10 +86,13 @@ export default function WeeklyChart({ weekStart, dailyData, categories }: Weekly
                   boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
                   fontSize: 12,
                 }}
-                formatter={(value: number, name: string) => [
-                  `${(value * 60).toFixed(0)}m`,
-                  name,
-                ]}
+                formatter={(value: number, name: string) => {
+                  const totalMins = Math.round(value * 60);
+                  const h = Math.floor(totalMins / 60);
+                  const m = totalMins % 60;
+                  const label = h > 0 && m > 0 ? `${h}h ${m}m` : h > 0 ? `${h}h` : `${m}m`;
+                  return [label, name];
+                }}
               />
               {categories.filter(c => c.name !== 'Unlabeled').map((cat, i) => (
                 <Bar

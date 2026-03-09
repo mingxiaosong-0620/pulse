@@ -171,7 +171,12 @@ export default function AnalyticsPage() {
             dailyData={dailyData}
             categories={categoryDefs}
           />
-          <CategoryLeaderboard totals={totals} />
+          <CategoryLeaderboard
+            totals={totals}
+            profileId={profileSelection}
+            startDate={format(weekStart, 'yyyy-MM-dd')}
+            endDate={format(endOfWeek(weekStart, { weekStartsOn: 1 }), 'yyyy-MM-dd')}
+          />
           {parallelMinutes > 0 && (
             <div className="px-4 py-2">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
