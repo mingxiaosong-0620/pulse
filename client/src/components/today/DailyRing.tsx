@@ -7,6 +7,9 @@ import { useAppStore } from '../../stores/appStore';
 
 interface Props {
   stats: DailyStat[];
+  taskMinutes?: number;
+  wallClockMinutes?: number;
+  multiplier?: number;
 }
 
 const FULL_DAY = 1440;
@@ -37,7 +40,7 @@ interface SubBreakdown {
   minutes: number;
 }
 
-export default function DailyRing({ stats }: Props) {
+export default function DailyRing({ stats, taskMinutes, wallClockMinutes, multiplier }: Props) {
   const { activeProfileId, selectedDate, categories } = useAppStore();
   const [expandedCat, setExpandedCat] = useState<number | null>(null);
   const [subBreakdown, setSubBreakdown] = useState<SubBreakdown[]>([]);
@@ -47,7 +50,8 @@ export default function DailyRing({ stats }: Props) {
   const trackedMinutes = trackedStats.reduce((sum, s) => sum + s.total_minutes, 0);
   const trackedHours = (trackedMinutes / 60).toFixed(1).replace(/\.0$/, '');
 
-  const unlabeledMinutes = unlabeledStat ? unlabeledStat.total_minutes : Math.max(0, FULL_DAY - trackedMinutes);
+  const wc = wallClockMinutes ?? trackedMinutes;
+  const unlabeledMinutes = unlabeledStat ? unlabeledStat.total_minutes : Math.max(0, FULL_DAY - wc);
   const data = [
     ...trackedStats.filter((s) => s.total_minutes > 0),
     ...(unlabeledMinutes > 0 ? [{ id: 6, name: 'Unlabeled', color: '#9CA3AF', icon: '❓', total_minutes: unlabeledMinutes }] : []),
@@ -117,10 +121,17 @@ export default function DailyRing({ stats }: Props) {
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-sm md:text-lg font-bold text-gray-800">
-            {trackedMinutes > 0 ? `${trackedHours}/24h` : '0/24h'}
+            {taskMinutes !== undefined && taskMinutes > 0
+              ? `${(taskMinutes / 60).toFixed(1).replace(/\.0$/, '')}h`
+              : trackedMinutes > 0 ? `${trackedHours}h` : '0h'}
           </span>
+          {wallClockMinutes !== undefined && wallClockMinutes > 0 && (
+            <span className="text-[10px] text-gray-400">
+              {(wallClockMinutes / 60).toFixed(1).replace(/\.0$/, '')}h wall{multiplier && multiplier > 1 ? ` \u00b7 ${multiplier}x` : ''}
+            </span>
+          )}
         </div>
       </div>
 

@@ -27,6 +27,10 @@ interface CategoryTotal {
 interface WeeklyStatsResponse {
   daily: DailyCategory[];
   totals: CategoryTotal[];
+  taskMinutes?: number;
+  wallClockMinutes?: number;
+  parallelMinutes?: number;
+  multiplier?: number;
 }
 
 export default function AnalyticsPage() {
@@ -39,6 +43,10 @@ export default function AnalyticsPage() {
   const [totals, setTotals] = useState<CategoryTotal[]>([]);
   const [profile1Totals, setProfile1Totals] = useState<CategoryTotal[]>([]);
   const [profile2Totals, setProfile2Totals] = useState<CategoryTotal[]>([]);
+  const [taskMinutes, setTaskMinutes] = useState(0);
+  const [wallClockMinutes, setWallClockMinutes] = useState(0);
+  const [parallelMinutes, setParallelMinutes] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
   const [loading, setLoading] = useState(false);
 
   const fetchStats = useCallback(async () => {
@@ -101,6 +109,12 @@ export default function AnalyticsPage() {
         setTotals(data.totals);
         setProfile1Totals([]);
         setProfile2Totals([]);
+        if (data.taskMinutes !== undefined) {
+          setTaskMinutes(data.taskMinutes);
+          setWallClockMinutes(data.wallClockMinutes);
+          setParallelMinutes(data.parallelMinutes);
+          setMultiplier(data.multiplier);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch weekly stats:', err);
@@ -160,6 +174,27 @@ export default function AnalyticsPage() {
             categories={categoryDefs}
           />
           <CategoryLeaderboard totals={totals} />
+          {parallelMinutes > 0 && (
+            <div className="px-4 py-2">
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Parallel Tasking</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-gray-900">{(taskMinutes / 60).toFixed(1)}h</p>
+                    <p className="text-[10px] text-gray-500">Task Hours</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-gray-900">{(wallClockMinutes / 60).toFixed(1)}h</p>
+                    <p className="text-[10px] text-gray-500">Wall Clock</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-emerald-600">{multiplier}x</p>
+                    <p className="text-[10px] text-gray-500">Multiplier</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

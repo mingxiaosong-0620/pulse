@@ -12,12 +12,24 @@ export default function TodayPage() {
   const { activeProfileId, selectedDate } = useAppStore();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [stats, setStats] = useState<DailyStat[]>([]);
+  const [taskMinutes, setTaskMinutes] = useState(0);
+  const [wallClockMinutes, setWallClockMinutes] = useState(0);
+  const [multiplier, setMultiplier] = useState(1);
   const [showQuickEntry, setShowQuickEntry] = useState(false);
 
   const fetchData = useCallback(() => {
     if (!activeProfileId) return;
     api.getEntries(activeProfileId, selectedDate).then(setEntries);
-    api.getDailyStats(activeProfileId, selectedDate).then(setStats);
+    api.getDailyStats(activeProfileId, selectedDate).then((data: any) => {
+      if (Array.isArray(data)) {
+        setStats(data);
+      } else {
+        setStats(data.categories || []);
+        setTaskMinutes(data.taskMinutes || 0);
+        setWallClockMinutes(data.wallClockMinutes || 0);
+        setMultiplier(data.multiplier || 1);
+      }
+    });
   }, [activeProfileId, selectedDate]);
 
   useEffect(() => {
@@ -40,7 +52,7 @@ export default function TodayPage() {
       <div className="flex flex-col md:flex-row md:gap-4 md:px-4">
         {/* Pie chart — compact, sticky on desktop */}
         <div className="px-4 md:px-0 md:sticky md:top-0 md:self-start md:w-72 md:shrink-0">
-          <DailyRing stats={stats} />
+          <DailyRing stats={stats} taskMinutes={taskMinutes} wallClockMinutes={wallClockMinutes} multiplier={multiplier} />
         </div>
 
         {/* Timeline — takes remaining space */}
