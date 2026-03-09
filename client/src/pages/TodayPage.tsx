@@ -36,12 +36,17 @@ export default function TodayPage() {
     <div className="flex flex-col pb-24">
       <DateStrip />
 
-      <div className="px-4">
-        <DailyRing stats={stats} />
-      </div>
+      {/* Desktop: side-by-side layout. Mobile: stacked */}
+      <div className="flex flex-col md:flex-row md:gap-4 md:px-4">
+        {/* Pie chart — compact, sticky on desktop */}
+        <div className="px-4 md:px-0 md:sticky md:top-0 md:self-start md:w-72 md:shrink-0">
+          <DailyRing stats={stats} />
+        </div>
 
-      <div className="px-4 mt-2">
-        <Timeline entries={entries} onRefresh={fetchData} />
+        {/* Timeline — takes remaining space */}
+        <div className="px-4 md:px-0 md:flex-1 mt-2 md:mt-0">
+          <Timeline entries={entries} onRefresh={fetchData} />
+        </div>
       </div>
 
       <button

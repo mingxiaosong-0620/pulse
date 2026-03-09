@@ -39,9 +39,13 @@ export default function WeeklyChart({ weekStart, dailyData, categories }: Weekly
 
     categories.forEach((cat) => {
       const match = dailyData.find(
-        (d) => d.date === date && d.category_id === cat.id,
+        (d) => {
+          // Handle both "2026-03-09" and "2026-03-09T00:00:00.000Z" date formats
+          const dDate = typeof d.date === 'string' ? d.date.slice(0, 10) : '';
+          return dDate === date && d.category_id === cat.id;
+        },
       );
-      row[cat.name] = match ? Math.round((match.total_minutes / 60) * 100) / 100 : 0;
+      row[cat.name] = match ? +(match.total_minutes / 60).toFixed(2) : 0;
     });
 
     return row;
@@ -87,7 +91,7 @@ export default function WeeklyChart({ weekStart, dailyData, categories }: Weekly
                   name,
                 ]}
               />
-              {categories.map((cat, i) => (
+              {categories.filter(c => c.name !== 'Unlabeled').map((cat, i) => (
                 <Bar
                   key={cat.id}
                   dataKey={cat.name}
