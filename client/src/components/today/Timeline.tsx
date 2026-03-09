@@ -15,7 +15,7 @@ const PX_PER_15 = 12;
 const PX_PER_HOUR = PX_PER_15 * 4;
 const LABEL_W = 40;
 const BLOCK_L = 48;
-const GUTTER_W = 6; // clickable gutter between labels and blocks
+const GUTTER_W = LABEL_W; // same width as time labels
 
 function parseTime(t: string): number {
   const [h, m] = t.split(':').map(Number);
@@ -220,9 +220,9 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
           {/* Gutter: clickable strip for adding entries in occupied time slots */}
           {hoverSlot !== null && isSlotOccupied(hoverSlot) && onAddEntry && (
             <div
-              className="absolute cursor-pointer z-10 rounded-sm bg-blue-100 hover:bg-blue-200 border border-blue-300/50 transition-colors flex items-center justify-center"
+              className="absolute cursor-pointer z-10 rounded-sm bg-blue-50 hover:bg-blue-100 border border-blue-200/60 transition-colors flex items-center justify-center gap-0.5"
               style={{
-                left: LABEL_W + 2,
+                left: 0,
                 width: GUTTER_W,
                 top: (hoverSlot / 15) * PX_PER_15,
                 height: PX_PER_15,
@@ -230,7 +230,7 @@ export default function Timeline({ entries, onRefresh, onAddEntry }: Props) {
               onClick={() => handleGutterClick(hoverSlot)}
               title={`Add task at ${fmtTime(hoverSlot)}`}
             >
-              <Plus size={4} className="text-blue-500" />
+              <Plus size={8} className="text-blue-400" />
             </div>
           )}
 
