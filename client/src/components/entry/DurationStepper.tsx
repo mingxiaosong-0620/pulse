@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ChevronLeft, X, Clock, ArrowRight, Play } from 'lucide-react';
+import { ChevronLeft, Clock, ArrowRight, Play } from 'lucide-react';
 import type { Category, Subcategory } from '../../lib/api';
 import clsx from 'clsx';
 
@@ -7,8 +7,8 @@ interface DurationStepperProps {
   category: Category;
   subcategory: Subcategory;
   startTime: string;
-  onSave: (duration: number, tags: string[], note: string, startTime: string) => void;
-  onStartNow?: (tags: string[], note: string, startTime: string) => void;
+  onSave: (duration: number, note: string, startTime: string) => void;
+  onStartNow?: (note: string, startTime: string) => void;
   onBack: () => void;
   saving: boolean;
 }
@@ -68,8 +68,6 @@ export default function DurationStepper({
   const [endTime, setEndTime] = useState(() =>
     minutesToTime(timeToMinutes(initialStartTime) + 30),
   );
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
   const [note, setNote] = useState('');
 
   const duration = useMemo(() => {
@@ -98,17 +96,6 @@ export default function DurationStepper({
     setEndTime(minutesToTime(timeToMinutes(startTime) + mins));
   };
 
-  const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !tags.includes(t)) {
-      setTags([...tags, t]);
-    }
-    setTagInput('');
-  };
-
-  const removeTag = (tag: string) => {
-    setTags(tags.filter((t) => t !== tag));
-  };
 
   return (
     <div className="px-4 pb-4 animate-slide-in">
@@ -198,36 +185,6 @@ export default function DurationStepper({
         </div>
       </div>
 
-      {/* Tags */}
-      <div className="mb-3">
-        <div className="flex flex-wrap gap-1.5 mb-2">
-          {tags.map((tag) => (
-            <span
-              key={tag}
-              className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600"
-            >
-              {tag}
-              <button onClick={() => removeTag(tag)} className="hover:text-gray-900">
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-        </div>
-        <input
-          type="text"
-          value={tagInput}
-          onChange={(e) => setTagInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              addTag();
-            }
-          }}
-          placeholder="Add tags (press Enter)"
-          className="w-full px-3 py-2 text-sm rounded-xl bg-gray-50 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-200 placeholder-gray-300"
-        />
-      </div>
-
       {/* Note */}
       <textarea
         value={note}
@@ -241,7 +198,7 @@ export default function DurationStepper({
       <div className="flex gap-2">
         {onStartNow && (
           <button
-            onClick={() => onStartNow(tags, note, startTime)}
+            onClick={() => onStartNow(note, startTime)}
             disabled={saving}
             className={clsx(
               'flex-1 py-3.5 rounded-2xl text-white font-semibold text-base',
@@ -256,7 +213,7 @@ export default function DurationStepper({
           </button>
         )}
         <button
-          onClick={() => onSave(duration, tags, note, startTime)}
+          onClick={() => onSave(duration, note, startTime)}
           disabled={saving}
           className={clsx(
             'flex-1 py-3.5 rounded-2xl text-white font-semibold text-base',

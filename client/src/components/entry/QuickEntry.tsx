@@ -115,7 +115,7 @@ export default function QuickEntry({ isOpen, onClose, onSaved, entries = [], pre
   );
 
   const handleSave = useCallback(
-    async (duration: number, tags: string[], note: string, customStartTime: string) => {
+    async (duration: number, note: string, customStartTime: string) => {
       if (!selectedSubcategory) return;
       setSaving(true);
       try {
@@ -125,7 +125,6 @@ export default function QuickEntry({ isOpen, onClose, onSaved, entries = [], pre
           date: selectedDate,
           start_time: customStartTime,
           duration_minutes: duration,
-          tags: tags.length > 0 ? tags : undefined,
           note: note.trim() || undefined,
         });
         onSaved();
@@ -140,7 +139,7 @@ export default function QuickEntry({ isOpen, onClose, onSaved, entries = [], pre
   );
 
   const handleStartNow = useCallback(
-    async (tags: string[], note: string, startTime: string) => {
+    async (note: string, startTime: string) => {
       if (!selectedSubcategory) return;
       setSaving(true);
       try {
@@ -149,7 +148,6 @@ export default function QuickEntry({ isOpen, onClose, onSaved, entries = [], pre
           subcategory_id: selectedSubcategory.id,
           date: selectedDate,
           start_time: startTime,
-          tags: tags.length > 0 ? tags : undefined,
           note: note.trim() || undefined,
         });
         onSaved();
