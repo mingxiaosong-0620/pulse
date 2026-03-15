@@ -4,34 +4,135 @@ import { ChevronLeft, ChevronRight, BarChart3, Sparkles } from 'lucide-react';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
 
+function renderInline(text: string): React.ReactNode[] {
+  // Parse **bold**, `code`, and plain text segments
+  const parts: React.ReactNode[] = [];
+  let remaining = text;
+  let i = 0;
+  while (remaining.length > 0) {
+    const boldMatch = remaining.match(/\*\*(.+?)\*\*/);
+    const codeMatch = remaining.match(/`([^`]+)`/);
+    // Find the earliest match
+    let earliest: { type: 'bold' | 'code'; index: number; full: string; inner: string } | null = null;
+    if (boldMatch && boldMatch.index !== undefined) {
+      earliest = { type: 'bold', index: boldMatch.index, full: boldMatch[0], inner: boldMatch[1] };
+    }
+    if (codeMatch && codeMatch.index !== undefined) {
+      if (!earliest || codeMatch.index < earliest.index) {
+        earliest = { type: 'code', index: codeMatch.index, full: codeMatch[0], inner: codeMatch[1] };
+      }
+    }
+    if (!earliest) {
+      parts.push(remaining);
+      break;
+    }
+    if (earliest.index > 0) {
+      parts.push(remaining.slice(0, earliest.index));
+    }
+    if (earliest.type === 'bold') {
+      parts.push(<strong key={`i${i++}`} className="font-semibold text-gray-900">{earliest.inner}</strong>);
+    } else {
+      parts.push(<code key={`i${i++}`} className="text-xs bg-gray-100 text-gray-700 px-1 py-0.5 rounded">{earliest.inner}</code>);
+    }
+    remaining = remaining.slice(earliest.index + earliest.full.length);
+  }
+  return parts;
+}
+
+function parseTableRow(line: string): string[] {
+  return line.split('|').slice(1, -1).map((cell) => cell.trim());
+}
+
+function isTableSeparator(line: string): boolean {
+  return /^\|[\s:-]+\|/.test(line) && line.includes('---');
+}
+
 function renderMarkdown(content: string) {
   const lines = content.split('\n');
   const elements: React.ReactElement[] = [];
   let key = 0;
+  let i = 0;
 
-  for (const line of lines) {
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Table detection: current line has pipes, next line is separator
+    if (line.includes('|') && i + 1 < lines.length && isTableSeparator(lines[i + 1])) {
+      const headers = parseTableRow(line);
+      i += 2; // skip header + separator
+      const rows: string[][] = [];
+      while (i < lines.length && lines[i].includes('|') && lines[i].trim().startsWith('|')) {
+        rows.push(parseTableRow(lines[i]));
+        i++;
+      }
+      elements.push(
+        <div key={key++} className="overflow-x-auto my-3">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b-2 border-gray-200">
+                {headers.map((h, hi) => (
+                  <th key={hi} className="text-left text-xs font-semibold text-gray-600 py-2 px-3 whitespace-nowrap">
+                    {renderInline(h)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} className={ri % 2 === 0 ? 'bg-gray-50/50' : ''}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="text-sm text-gray-700 py-1.5 px-3 border-b border-gray-100">
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$/.test(line.trim())) {
+      elements.push(<hr key={key++} className="my-4 border-gray-200" />);
+      i++;
+      continue;
+    }
+
+    // Headings
     if (line.startsWith('## ')) {
       elements.push(
         <h2 key={key++} className="text-base font-bold text-gray-900 mt-4 mb-2 first:mt-0">
-          {line.slice(3)}
+          {renderInline(line.slice(3))}
         </h2>
       );
     } else if (line.startsWith('### ')) {
       elements.push(
         <h3 key={key++} className="text-sm font-semibold text-gray-800 mt-3 mb-1">
-          {line.slice(4)}
+          {renderInline(line.slice(4))}
         </h3>
       );
     } else if (line.startsWith('# ')) {
       elements.push(
         <h1 key={key++} className="text-lg font-bold text-gray-900 mt-4 mb-2 first:mt-0">
-          {line.slice(2)}
+          {renderInline(line.slice(2))}
         </h1>
       );
+    // Numbered list
+    } else if (/^\d+\.\s/.test(line)) {
+      const text = line.replace(/^\d+\.\s/, '');
+      elements.push(
+        <li key={key++} className="text-sm text-gray-700 leading-relaxed ml-4 list-decimal">
+          {renderInline(text)}
+        </li>
+      );
+    // Bullet list
     } else if (line.startsWith('- ') || line.startsWith('* ')) {
       elements.push(
         <li key={key++} className="text-sm text-gray-700 leading-relaxed ml-4 list-disc">
-          {line.slice(2)}
+          {renderInline(line.slice(2))}
         </li>
       );
     } else if (line.trim() === '') {
@@ -39,10 +140,11 @@ function renderMarkdown(content: string) {
     } else {
       elements.push(
         <p key={key++} className="text-sm text-gray-700 leading-relaxed">
-          {line}
+          {renderInline(line)}
         </p>
       );
     }
+    i++;
   }
 
   return elements;
